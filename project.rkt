@@ -85,12 +85,19 @@
 
 (define (adjust-weights weight out err epsilon)
   (let-values ([(w h) (matrix-shape weight)])
-    (build-matrix w h
-                  (lambda (j k) (-
-                                 (matrix-ref weight j k)
-                                 (* (matrix-ref out k 0) (matrix-ref err j 0) epsilon))))))
+    (let loop ([j 0] [rows '()])
+      (if (= j w)
+          (list->matrix w h (append* (reverse rows)))
+          (loop (+ j 1)
+                (cons (let loop2 ([k 0] [row '()])
+                        (if (= k h)
+                            (reverse row)
+                            (loop2 (+ k 1)
+                                   (cons (- (matrix-ref weight j k)
+                                            (* (matrix-ref out k 0) (matrix-ref err j 0) epsilon))
+                                         row))))
+                      rows))))))
 
-; Example usage
 (define (adjust-parameters weights biases outputs errors)
   (let ([epsilon 1])
     (map (lambda (w b o e) (list (adjust-weights w (second o) e epsilon) (matrix- b (matrix-scale e epsilon))))
